@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>시안 B · 지도</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  #side{position:fixed;left:0;top:52px;bottom:0;width:250px;z-index:25;background:var(--card);border-right:1px solid var(--line);border-top-right-radius:10px;padding:4px 12px 12px;overflow:auto;transition:transform .2s}
+  #side.closed{transform:translateX(-100%)}
+  #side h3{font-size:12px;color:var(--mut);margin:14px 0 6px;font-weight:600}
+  #side label{display:flex;align-items:center;gap:6px;padding:3px 0;font-size:13px;cursor:pointer}
+  #side label i{width:10px;height:10px;border-radius:50%;flex:none}
+  #side label span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #side label em{font-style:normal;color:var(--mut);font-size:12px}
+  #side label .go{border:0;background:none;color:var(--mut);cursor:pointer;padding:0 2px;font-size:13px}
+  #side label .go:hover{color:var(--acc)}
+  #side .rng{display:flex;gap:6px;align-items:center;font-size:13px}
+  #side .rng input{flex:1;min-width:0;width:0}
+  #mini{position:fixed;right:12px;bottom:12px;z-index:15;width:170px;height:170px;border:1px solid var(--line);border-radius:10px;background:#0f1115e0;cursor:pointer;touch-action:none}
+  body.panel-open #mini{right:calc(var(--panel-w) + 12px)}
+  #zoomctl{position:fixed;right:12px;bottom:194px;z-index:15;display:flex;flex-direction:column;gap:4px}
+  body.panel-open #zoomctl{right:calc(var(--panel-w) + 12px)}
+  #zoomctl .btn{width:34px;padding:4px 0;font-size:18px}
+  #stage.side-open{left:250px}
+  .bar{padding-left:12px}
+  @media (max-width:720px){#side{width:82vw;max-width:300px}#stage.side-open{left:0}#mini{width:110px;height:110px;bottom:12px;right:8px}#zoomctl{bottom:130px;right:8px}body.panel-open #mini,body.panel-open #zoomctl{display:none}}
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="cv"></canvas></div>
+<div class="bar" id="bar">
+  <button class="btn on" id="sidebtn">☰ 필터</button>
+  <a class="home" href="./">← 시안 목록</a>
+  <h1>B · 지도</h1>
+</div>
+<aside id="side">
+  <h3>큰 분야 <button class="btn" id="allk" style="padding:1px 6px;font-size:11px;float:right">전체</button></h3>
+  <div id="klist"></div>
+  <h3>언어</h3>
+  <div id="llist"></div>
+  <h3>난이도</h3>
+  <div class="rng"><input type="range" id="dmin" min="1" max="5" value="1"><b id="dv">1~5</b><input type="range" id="dmax" min="1" max="5" value="5"></div>
+  <h3>표시</h3>
+  <label><input type="checkbox" id="showtitles" checked><span>가까이서 책 제목</span></label>
+  <p style="color:var(--mut);font-size:12px;margin-top:16px">끌어서 이동(관성) · 휠/두 손가락 확대 · 더블클릭 확대 · 확대할수록 큰 분야 → 세부 주제 → 책 제목이 차례로 나타납니다. 오른쪽 아래 미니맵을 눌러 이동.</p>
+</aside>
+<div id="zoomctl"><button class="btn" id="zin">+</button><button class="btn" id="zout">−</button><button class="btn" id="zfit" style="font-size:13px">⤢</button></div>
+<canvas id="mini"></canvas>
+<script src="data.js"></script>
+<script src="common.js"></script>
+<script>
+// Nomic Atlas·지도 앱을 따라 한 것: 2D 의미 지도를 '지도'처럼 끌고(관성) 휠·핀치로 커서 쪽 확대,
+// 확대 단계마다 이름표가 바뀜(큰 분야 → 세부 주제 → 책 제목, 글자끼리 겹치면 덜 중요한 것을 숨김),
+// 미니맵(현재 보이는 범위 사각형), 왼쪽 필터 사이드바(분야·언어·난이도, 걸러진 점은 흐리게).
+const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+const mini = document.getElementById("mini"), mctx = mini.getContext("2d");
+const stage = document.getElementById("stage");
+const n = P.length;
+const X = P.map(p => p.u[0]), Y = P.map(p => p.u[1]);
+let W = 0, H = 0, dpr = 1;
+const cam = { x: 0, y: 0, s: 1 };   // 화면 가운데의 세계 좌표, 배율(px/단위)
+const goal = { x: 0, y: 0, s: 1 };  // 부드러운 확대·날아가기의 목표
+let vel = { x: 0, y: 0 };               // 관성(세계 좌표/프레임)
+let fitS = 1;
+// 데이터 범위(가운데·크기)에 맞춰 전체 보기
+const BX = [Math.min(...X), Math.max(...X)], BY = [Math.min(...Y), Math.max(...Y)];
+const MID = { x: (BX[0] + BX[1]) / 2, y: (BY[0] + BY[1]) / 2 };
+
+// 군집 중심(이름표 자리): 군집 점들의 중앙값
+const median = a => { const s = [...a].sort((p, q) => p - q); return s[s.length >> 1]; };
+const centers = (key, count) => Array.from({ length: count }, (_, c) => {
+  const idx = P.map((p, i) => p[key] === c ? i : -1).filter(i => i >= 0);
+  return { x: median(idx.map(i => X[i])), y: median(idx.map(i => Y[i])), n: idx.length };
+});
+const C1 = centers("k1", D.coarse.length), C2 = centers("k2", D.fine.length);
+
+// 필터
+const on = { k: new Set(D.coarse.map((_, k) => k)), l: new Set([0, 1, 2]), dmin: 1, dmax: 5 };
+const pass = i => on.k.has(P[i].k1) && on.l.has(P[i].l) && (!P[i].d || (P[i].d >= on.dmin && P[i].d <= on.dmax));
+let visible = new Uint8Array(n).fill(1), matches = null, selected = -1, hover = -1;
+function refilter() { for (let i = 0; i < n; i++) visible[i] = pass(i) ? 1 : 0; dirty = true; }
+
+const klist = document.getElementById("klist");
+klist.innerHTML = D.coarse.map((c, k) => `<label><input type="checkbox" data-k="${k}" checked><i style="background:${PALETTE[k % PALETTE.length]}"></i><span>${esc(c.name)}</span><em>${C1[k].n}</em><button class="go" data-go="${k}" title="이 분야로 이동">→</button></label>`).join("");
+klist.addEventListener("change", e => { const k = +e.target.dataset.k; e.target.checked ? on.k.add(k) : on.k.delete(k); refilter(); });
+klist.addEventListener("click", e => { const g = e.target.closest(".go"); if (g) { e.preventDefault(); flyCluster(+g.dataset.go); } });
+document.getElementById("allk").addEventListener("click", () => {
+  const all = on.k.size !== D.coarse.length;
+  klist.querySelectorAll("input").forEach(x => { x.checked = all; all ? on.k.add(+x.dataset.k) : on.k.delete(+x.dataset.k); });
+  refilter();
+});
+const llist = document.getElementById("llist");
+llist.innerHTML = D.langs.map((l, k) => `<label><input type="checkbox" data-l="${k}" checked><span>${esc(l)}</span><em>${P.filter(p => p.l === k).length}</em></label>`).join("");
+llist.addEventListener("change", e => { const k = +e.target.dataset.l; e.target.checked ? on.l.add(k) : on.l.delete(k); refilter(); });
+const dmin = document.getElementById("dmin"), dmax = document.getElementById("dmax");
+function drange() { on.dmin = Math.min(+dmin.value, +dmax.value); on.dmax = Math.max(+dmin.value, +dmax.value); document.getElementById("dv").textContent = `${on.dmin}~${on.dmax}`; refilter(); }
+dmin.addEventListener("input", drange); dmax.addEventListener("input", drange);
+document.getElementById("showtitles").addEventListener("change", () => dirty = true);
+
+const side = document.getElementById("side"), sidebtn = document.getElementById("sidebtn");
+function setSide(open) { side.classList.toggle("closed", !open); sidebtn.classList.toggle("on", open); stage.classList.toggle("side-open", open && innerWidth > 720); resize(); }
+sidebtn.addEventListener("click", () => setSide(side.classList.contains("closed")));
+
+const panel = makePanel({ onPick: i => select(i, true), onClose: () => select(-1) });
+function select(i, fly = false) {
+  selected = i;
+  document.body.classList.toggle("panel-open", i >= 0 && innerWidth > 720);
+  if (i >= 0) { panel.show(i); if (fly) { const s = Math.max(goal.s, fitS * 8); flyTo(X[i], Y[i] + (narrow() ? H * 0.26 / s : 0), s); } if (innerWidth <= 720) setSide(false); }
+  else panel.hide();
+  dirty = true;
+}
+makeSearch(document.getElementById("bar"), {
+  onInput: hits => { matches = hits ? new Set(hits) : null; dirty = true; },
+  onPick: i => select(i, true),
+});
+
+// 좌표 변환
+const sx = x => (x - cam.x) * cam.s + W / 2, sy = y => (y - cam.y) * cam.s + H / 2;
+const wx = px => (px - W / 2) / cam.s + cam.x, wy = py => (py - H / 2) / cam.s + cam.y;
+
+function flyTo(x, y, s) { goal.x = x; goal.y = y; goal.s = Math.max(fitS * 0.6, Math.min(s, fitS * 80)); vel = { x: 0, y: 0 }; }
+function flyCluster(k) { const c = C1[k]; flyTo(c.x, c.y, fitS * 3.2); }
+function zoomAt(px, py, f) {
+  const s = Math.max(fitS * 0.6, Math.min(goal.s * f, fitS * 80));
+  // 커서 아래 세계 점이 그대로 커서 아래에 남게 목표 중심을 옮긴다
+  const ax = wx(px), ay = wy(py);
+  goal.x = ax - (px - W / 2) / s; goal.y = ay - (py - H / 2) / s; goal.s = s;
+}
+function fit() { flyTo(MID.x, MID.y, fitS); }
+
+function resize() {
+  const r = stage.getBoundingClientRect();
+  dpr = Math.min(devicePixelRatio, 2); W = r.width; H = r.height;
+  cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + "px"; cv.style.height = H + "px";
+  const first = fitS === 1 && cam.s === 1;
+  fitS = Math.min((W - 40) / (BX[1] - BX[0]), (H - 110) / (BY[1] - BY[0]));
+  if (first) { cam.s = goal.s = fitS; cam.x = goal.x = MID.x; cam.y = goal.y = MID.y - 20 / fitS; }
+  const m = mini.getBoundingClientRect();
+  mini.width = m.width * dpr; mini.height = m.height * dpr;
+  dirty = true;
+}
+addEventListener("resize", resize);
+
+// 끌기·관성·핀치(포인터 이벤트 하나로 마우스·터치 모두)
+const ptrs = new Map();
+let drag = null, pinch = null, moved = 0, lastTap = 0;
+cv.addEventListener("pointerdown", e => {
+  cv.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  vel = { x: 0, y: 0 };
+  goal.x = cam.x; goal.y = cam.y;
+  if (ptrs.size === 1) { drag = { x: e.clientX, y: e.clientY, t: performance.now() }; moved = 0; }
+  if (ptrs.size === 2) {
+    const [a, b] = [...ptrs.values()];
+    pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), s: goal.s }; drag = null;
+  }
+});
+cv.addEventListener("pointermove", e => {
+  const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+  if (!ptrs.has(e.pointerId)) {
+    if (e.pointerType === "mouse") { const i = nearest(px, py, 10); if (i !== hover) { hover = i; dirty = true; } i >= 0 ? showTip(e.clientX, e.clientY, P[i].t) : hideTip(); cv.style.cursor = i >= 0 ? "pointer" : "grab"; }
+    return;
+  }
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinch && ptrs.size === 2) {
+    const [a, b] = [...ptrs.values()];
+    const mx = (a.x + b.x) / 2 - r.left, my = (a.y + b.y) / 2 - r.top;
+    const f = Math.hypot(a.x - b.x, a.y - b.y) / pinch.d;
+    goal.s = cam.s; zoomAt(mx, my, pinch.s * f / cam.s); cam.s = goal.s; cam.x = goal.x; cam.y = goal.y; moved = 99; dirty = true;
+  } else if (drag) {
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y, now = performance.now();
+    moved += Math.abs(dx) + Math.abs(dy);
+    cam.x -= dx / cam.s; cam.y -= dy / cam.s; goal.x = cam.x; goal.y = cam.y;
+    const dt = Math.max(now - drag.t, 1);
+    vel = { x: 0.8 * (-dx / cam.s) * (16 / dt) + 0.2 * vel.x, y: 0.8 * (-dy / cam.s) * (16 / dt) + 0.2 * vel.y };
+    drag = { x: e.clientX, y: e.clientY, t: now }; hideTip(); dirty = true;
+  }
+});
+function up(e) {
+  ptrs.delete(e.pointerId);
+  if (ptrs.size < 2) pinch = null;
+  if (drag && performance.now() - drag.t > 80) vel = { x: 0, y: 0 };  // 멈췄다 놓으면 관성 없음
+  if (e.type === "pointerup" && moved < 6 && ptrs.size === 0) {
+    const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+    const now = performance.now();
+    if (now - lastTap < 300) { zoomAt(px, py, 2.2); lastTap = 0; return; }  // 더블 클릭·탭 = 확대
+    lastTap = now;
+    select(nearest(px, py, isTouch ? 22 : 10));
+  }
+  if (ptrs.size === 0) drag = null;
+}
+cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
+cv.addEventListener("pointerleave", () => { hideTip(); if (hover >= 0) { hover = -1; dirty = true; } });
+cv.addEventListener("wheel", e => {
+  e.preventDefault();
+  const r = cv.getBoundingClientRect();
+  zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0022)));
+}, { passive: false });
+document.getElementById("zin").onclick = () => zoomAt(W / 2, H / 2, 1.8);
+document.getElementById("zout").onclick = () => zoomAt(W / 2, H / 2, 1 / 1.8);
+document.getElementById("zfit").onclick = fit;
+addEventListener("keydown", e => { if (e.target.tagName === "INPUT") return; if (e.key === "+" || e.key === "=") zoomAt(W / 2, H / 2, 1.5); if (e.key === "-") zoomAt(W / 2, H / 2, 1 / 1.5); if (e.key === "0") fit(); });
+
+function nearest(px, py, maxd) {
+  let best = -1, bd = maxd * maxd;
+  for (let i = 0; i < n; i++) {
+    if (!visible[i]) continue;
+    const dx = sx(X[i]) - px, dy = sy(Y[i]) - py, d = dx * dx + dy * dy;
+    if (d < bd) { bd = d; best = i; }
+  }
+  return best;
+}
+
+// 미니맵: 눌러서/끌어서 이동
+function miniMove(e) {
+  const r = mini.getBoundingClientRect(), pad = 8;
+  const sc = (Math.min(r.width, r.height) - pad * 2) / 1000;
+  goal.x = (e.clientX - r.left - pad) / sc; goal.y = (e.clientY - r.top - pad) / sc; vel = { x: 0, y: 0 };
+}
+mini.addEventListener("pointerdown", e => { mini.setPointerCapture(e.pointerId); miniMove(e); });
+mini.addEventListener("pointermove", e => { if (mini.hasPointerCapture(e.pointerId)) miniMove(e); });
+
+// 그리기
+let dirty = true;
+const fade = (z, a, b) => Math.max(0, Math.min(1, (z - a) / (b - a)));
+function label(text, x, y, size, weight, color, alpha, boxes, pad = 4) {
+  if (alpha <= 0.02) return false;
+  ctx.font = `${weight} ${size}px system-ui,"Apple SD Gothic Neo","Noto Sans KR",sans-serif`;
+  const w = ctx.measureText(text).width, h = size;
+  const b = { x0: x - w / 2 - pad, y0: y - h / 2 - pad, x1: x + w / 2 + pad, y1: y + h / 2 + pad };
+  if (b.x1 < 0 || b.x0 > W || b.y1 < 0 || b.y0 > H) return false;
+  for (const o of boxes) if (b.x0 < o.x1 && b.x1 > o.x0 && b.y0 < o.y1 && b.y1 > o.y0) return false;
+  boxes.push(b);
+  ctx.globalAlpha = alpha;
+  ctx.lineWidth = Math.max(3, size / 4); ctx.strokeStyle = "#0f1115"; ctx.lineJoin = "round";
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.strokeText(text, x, y); ctx.fillStyle = color; ctx.fillText(text, x, y);
+  ctx.globalAlpha = 1;
+  return true;
+}
+function draw() {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = "#0f1115"; ctx.fillRect(0, 0, W, H);
+  const z = cam.s / fitS;              // 1 = 전체 보기
+  const r = Math.max(1.6, Math.min(2 + Math.log2(z) * 1.3, 7));
+  const nb = selected >= 0 ? new Set(P[selected].nn.slice(0, 10)) : null;
+  // 점(흐린 것 먼저)
+  for (let pass = 0; pass < 2; pass++) {
+    for (let i = 0; i < n; i++) {
+      const lit = visible[i] && (!matches || matches.has(i));
+      if ((pass === 0) === !!lit) continue;
+      const x = sx(X[i]), y = sy(Y[i]);
+      if (x < -10 || x > W + 10 || y < -10 || y > H + 10) continue;
+      ctx.fillStyle = lit ? colorOf(i) : "#3a3f4a";
+      ctx.globalAlpha = lit ? (selected >= 0 && i !== selected && !nb.has(i) ? 0.55 : 0.9) : 0.35;
+      ctx.beginPath(); ctx.arc(x, y, i === hover ? r * 1.7 : r, 0, 7); ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+  if (selected >= 0) {
+    ctx.strokeStyle = "#ffffff80"; ctx.lineWidth = 1;
+    for (const j of nb) { ctx.beginPath(); ctx.moveTo(sx(X[selected]), sy(Y[selected])); ctx.lineTo(sx(X[j]), sy(Y[j])); ctx.stroke(); }
+    ctx.strokeStyle = "#fff"; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(sx(X[selected]), sy(Y[selected]), r + 5, 0, 7); ctx.stroke();
+  }
+  // 이름표(계층): 큰 분야는 멀리서, 세부 주제는 중간, 책 제목은 가까이
+  const boxes = [];
+  if (selected >= 0) label(P[selected].t, sx(X[selected]), sy(Y[selected]) - r - 14, 14, 700, "#fff", 1, boxes);
+  if (hover >= 0) label(P[hover].t, sx(X[hover]), sy(Y[hover]) - r - 12, 13, 600, "#fff", 1, boxes);
+  const a1 = 1 - fade(z, 2.2, 3.4), a2 = fade(z, 1.6, 2.4) * (1 - fade(z, 9, 13)), a3 = fade(z, 5, 7);
+  if (a1 > 0) [...C1.keys()].sort((p, q) => C1[q].n - C1[p].n).forEach(k => on.k.has(k) && label(D.coarse[k].name, sx(C1[k].x), sy(C1[k].y), 20, 800, "#fff", a1, boxes, 6));
+  if (a2 > 0) [...C2.keys()].sort((p, q) => C2[q].n - C2[p].n).forEach(f => on.k.has(D.fine[f].parent) && label(D.fine[f].name, sx(C2[f].x), sy(C2[f].y), 14, 700, PALETTE[D.fine[f].parent % PALETTE.length], a2, boxes, 5));
+  if (a3 > 0 && document.getElementById("showtitles").checked) {
+    // 화면 가운데 가까운 책부터 자리를 차지한다
+    const idx = [];
+    for (let i = 0; i < n; i++) { if (!visible[i]) continue; const x = sx(X[i]), y = sy(Y[i]); if (x > 0 && x < W && y > 0 && y < H) idx.push([i, (x - W / 2) ** 2 + (y - H / 2) ** 2]); }
+    idx.sort((p, q) => p[1] - q[1]);
+    for (const [i] of idx.slice(0, 400)) { const t = P[i].t.length > 22 ? P[i].t.slice(0, 21) + "…" : P[i].t; label(t, sx(X[i]), sy(Y[i]) - r - 8, 11.5, 500, "#d8dbe2", a3, boxes, 2); }
+  }
+  drawMini();
+}
+function drawMini() {
+  const w = mini.width / dpr, h = mini.height / dpr, pad = 8, sc = (Math.min(w, h) - pad * 2) / 1000;
+  mctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  mctx.clearRect(0, 0, w, h);
+  for (let i = 0; i < n; i++) { mctx.fillStyle = visible[i] ? colorOf(i) : "#3a3f4a"; mctx.fillRect(pad + X[i] * sc - 0.75, pad + Y[i] * sc - 0.75, 1.5, 1.5); }
+  const x0 = wx(0), y0 = wy(0), x1 = wx(W), y1 = wy(H);
+  mctx.strokeStyle = "#fff"; mctx.lineWidth = 1.5;
+  mctx.strokeRect(pad + x0 * sc, pad + y0 * sc, (x1 - x0) * sc, (y1 - y0) * sc);
+}
+function frame() {
+  const dragging = ptrs.size > 0;
+  if (!dragging && (Math.abs(vel.x) + Math.abs(vel.y)) * cam.s > 0.05) {  // 관성: 놓은 뒤 미끄러지다 멈춘다
+    cam.x += vel.x; cam.y += vel.y; goal.x = cam.x; goal.y = cam.y; vel.x *= 0.92; vel.y *= 0.92; dirty = true;
+  } else if (!dragging) {
+    const k = 0.18;
+    if (Math.abs(goal.s / cam.s - 1) > 0.001 || Math.abs(goal.x - cam.x) * cam.s > 0.3 || Math.abs(goal.y - cam.y) * cam.s > 0.3) {
+      cam.s *= Math.pow(goal.s / cam.s, k); cam.x += (goal.x - cam.x) * k; cam.y += (goal.y - cam.y) * k; dirty = true;
+    }
+  }
+  if (dirty) { dirty = false; draw(); }
+  requestAnimationFrame(frame);
+}
+setSide(innerWidth > 720);
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

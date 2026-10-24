@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>서재 지도 시안</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  html,body{overflow:auto}
+  main{max-width:880px;margin:0 auto;padding:28px 16px 48px}
+  h1{font-size:22px;margin:0 0 6px}
+  .sub{color:var(--mut);margin:0 0 22px}
+  .cards{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+  .card{display:block;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;color:var(--fg);text-decoration:none}
+  .card:hover{border-color:var(--acc)}
+  .card b{font-size:28px;color:var(--acc)}
+  .card h2{font-size:17px;margin:4px 0 2px}
+  .card .from{color:var(--mut);font-size:13px;margin-bottom:10px}
+  .card ul{margin:0;padding-left:18px;font-size:13px}
+  .foot{color:var(--mut);font-size:13px;margin-top:22px}
+</style>
+</head>
+<body>
+<main>
+  <h1>서재 지도 · 조작 방식 시안 3개</h1>
+  <p class="sub">같은 책 데이터를 세 가지 조작 방식으로 그렸습니다. 직접 만져 보고 손에 맞는 것을 고르세요. 점을 누르면 오른쪽(폰은 아래)에 정보와 「드라이브에서 열기」가 나옵니다.</p>
+  <div class="cards">
+    <a class="card" href="a.html"><b>A</b><h2>임베딩 프로젝터</h2><div class="from">Google TensorFlow Embedding Projector 방식</div>
+      <ul><li>3D 궤도 회전 · 휠 확대 · 자동 회전 켜고 끄기</li><li>점 클릭 → 가까운 이웃만 진하게, 나머지 흐리게(선택 고정)</li><li>이웃 수 조절 · '이웃만 보기' · 색 바꾸기</li></ul></a>
+    <a class="card" href="b.html"><b>B</b><h2>지도</h2><div class="from">Nomic Atlas · 지도 앱 방식 (2D)</div>
+      <ul><li>끌면 관성으로 미끄러지는 이동 · 커서 쪽으로 부드러운 확대</li><li>확대할수록 큰 분야 → 세부 주제 → 책 제목</li><li>미니맵 · 왼쪽 필터(분야·언어·난이도)</li></ul></a>
+    <a class="card" href="c.html"><b>C</b><h2>책 그래프</h2><div class="from">3d-force-graph · Obsidian 3D 그래프 방식</div>
+      <ul><li>비슷한 책끼리 선(임베딩 이웃 3)</li><li>점 클릭 → 카메라가 날아가 붙음 · 선 위로 흐르는 입자</li><li>관성 회전 · '힘으로 풀기'로 그래프처럼 재배치</li></ul></a>
+  </div>
+  <p class="foot"><a href="../">← 기존 서재 지도</a></p>
+</main>
+</body>
+</html>
