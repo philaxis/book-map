@@ -1,0 +1,236 @@
+/* 설정창 시안 공통. 색은 본편 변수(--bg --fg --mut --card --solid --line --chip --acc --shadow)를 그대로 쓴다. */
+:root{--sx-ok:#2f8f5b;--sx-no:#c2413b;--sx-r:12px}
+/* 옛 설정창·옛 로그인 칸·🔔(intake.js)은 숨긴다(시안이 자기 자리에 다시 그림). #user-slot 은 상태를 읽으려 DOM 에 남긴다. */
+#toggle,#more,#user-slot,#shelf-btn,#bell{display:none!important}
+
+/* 공통 조각 */
+.sx-preset,.sx-lead,.sx-note,.sx-mi,.sx-sw,.sx-ni,.sx-acct,.sx-opt{word-break:keep-all;overflow-wrap:anywhere}
+.sx-btn{border:1px solid var(--line);background:var(--solid);border-radius:9px;padding:6px 12px;font-size:13px;cursor:pointer;white-space:nowrap;color:var(--fg)}
+.sx-btn:hover{border-color:color-mix(in srgb,var(--acc) 50%,var(--line))}
+.sx-btn.pri{background:var(--acc);border-color:var(--acc);color:var(--acc-ink);font-weight:600}
+.sx-btn.on{border-color:var(--acc);color:var(--acc)}
+.sx-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.sx-row.end{justify-content:flex-end}
+.sx-note{font-size:11.5px;color:var(--mut);margin:8px 0 0;line-height:1.5}
+.sx-lead{font-size:13px;color:var(--mut);margin:0 0 10px;line-height:1.55}
+.sx-gh{grid-column:1/-1;font-size:11px;font-weight:600;color:var(--mut);letter-spacing:.02em;margin:6px 2px 0}
+.sx-gh:first-child{margin-top:0}
+.sx-h{font-size:12px;font-weight:600;color:var(--mut);margin:0 0 8px;letter-spacing:.02em;display:flex;align-items:center;gap:6px}
+.sx-h .cur{margin-left:auto;font-weight:500;color:var(--fg)}
+
+/* 세그먼트(라디오 묶음) */
+.sx-seg{display:flex;background:var(--chip);border-radius:10px;padding:3px;gap:2px}
+.sx-seg button{flex:1;border:0;background:none;border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer;white-space:nowrap;color:var(--mut);display:flex;align-items:center;justify-content:center;gap:5px}
+.sx-seg button:hover{color:var(--fg)}
+.sx-seg button.on{background:var(--solid);color:var(--fg);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.sx-seg.sm button{padding:4px 10px;font-size:12px}
+.sx-seg small{font-size:11px;color:var(--acc);font-weight:700}
+.sx-views button{flex-direction:column;gap:2px;padding:6px 4px;font-size:12px}
+.sx-views svg{width:30px;height:18px}
+
+/* 프리셋 카드(그림 + 이름 + 한 줄 설명) */
+.sx-preset{border:1px solid var(--line);background:var(--solid);border-radius:var(--sx-r);padding:8px 8px 9px;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;color:var(--fg);min-width:0}
+.sx-preset .pic{display:block;width:100%;height:30px;margin-bottom:4px;color:var(--mut)}
+.sx-preset .pic svg{height:30px;width:auto;display:block}
+.sx-preset b{font-size:13.5px;font-weight:650}
+.sx-preset small{font-size:11.5px;color:var(--mut);line-height:1.35}
+.sx-preset:hover{border-color:color-mix(in srgb,var(--acc) 45%,var(--line))}
+.sx-preset.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset;background:color-mix(in srgb,var(--acc) 6%,var(--solid))}
+.sx-preset.on b{color:var(--acc)}
+
+/* 색 선택지: 이름 + 팔레트/그라데이션 미리보기 */
+.sx-opts{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.sx-opt{position:relative;border:1px solid var(--line);background:var(--solid);border-radius:10px;padding:7px 9px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:5px;text-align:left;color:var(--fg);min-width:0}
+.sx-opt .lab{font-size:13px;font-weight:550;white-space:nowrap}
+.sx-opt .lab small{font-size:11px;color:var(--mut);font-weight:400}
+.sx-opt .ends{display:flex;justify-content:space-between;width:100%;margin-top:-3px}
+.sx-opt .ends small{font-size:10.5px;color:var(--mut)}
+.sx-opt .ck{position:absolute;top:6px;right:7px;width:15px;height:15px;color:var(--acc);display:none}
+.sx-opt .ck svg{width:15px;height:15px;display:block}
+.sx-opt:hover{border-color:color-mix(in srgb,var(--acc) 45%,var(--line))}
+.sx-opt.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+.sx-opt.on .ck{display:block}
+.sx-pal{display:flex;gap:3px}
+.sx-pal i{width:12px;height:12px;border-radius:50%;display:block}
+.sx-ramp{display:block;width:100%;height:9px;border-radius:5px}
+
+/* 크기 칩 */
+.sx-chips{display:flex;flex-wrap:wrap;gap:6px}
+.sx-chip{border:1px solid var(--line);background:var(--solid);border-radius:999px;padding:5px 11px 5px 8px;font-size:13px;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;color:var(--fg)}
+.sx-chip:hover{border-color:color-mix(in srgb,var(--acc) 45%,var(--line))}
+.sx-chip.on{border-color:var(--acc);color:var(--acc);font-weight:600}
+.sx-szp{width:26px;height:11px;fill:currentColor;opacity:.75;flex:none}
+
+/* 켜고 끄기 줄 */
+.sx-sw{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;padding:7px 2px;cursor:pointer;text-align:left;color:var(--fg);font-size:13.5px}
+.sx-sw .t{flex:1;min-width:0;display:flex;flex-direction:column}
+.sx-sw .t small{font-size:11.5px;color:var(--mut)}
+.sx-sw i{flex:none;width:34px;height:20px;border-radius:10px;background:var(--grey);position:relative;transition:background .15s}
+.sx-sw i::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.sx-sw.on i{background:var(--acc)}
+.sx-sw.on i::after{transform:translateX(14px)}
+.sx-sw.dis{opacity:.5}
+
+/* 고급 */
+.sx-axes{display:grid;gap:6px}
+.sx-axes label{display:grid;grid-template-columns:40px 1fr;align-items:center;gap:8px;font-size:12px;color:var(--mut)}
+.sx-axes select{width:100%;min-width:0;border:1px solid var(--line);background:var(--solid);border-radius:8px;padding:5px 6px;font-size:13px}
+.sx-krow{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mut);margin-top:10px}
+.sx-krow input{flex:1;accent-color:var(--acc)}
+.sx-krow b{font-size:13px;color:var(--fg);width:20px;text-align:right}
+.sx-tools{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.sx-tools .sx-btn.on{border-color:var(--acc);color:var(--acc)}
+details.sx-adv{border:0;padding:0;margin:0}
+details.sx-adv>summary{list-style:none;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--mut);padding:6px 0;display:flex;align-items:center;gap:6px}
+details.sx-adv>summary::-webkit-details-marker{display:none}
+details.sx-adv>summary::before{content:none}
+details.sx-adv>summary svg{width:15px;height:15px;transition:transform .15s}
+details.sx-adv[open]>summary svg{transform:rotate(180deg)}
+details.sx-adv>summary small{font-weight:400}
+
+/* 범례(시안 안에 넣을 때) */
+.sx-lg{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:12px;color:var(--mut);line-height:1.7}
+.sx-lg .it{white-space:nowrap}
+.sx-lg .it i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:0}
+.sx-lg em{font-style:normal;opacity:.7}
+.sx-lg.ramp{align-items:center;flex-wrap:nowrap;gap:8px}
+.sx-lg.ramp i{flex:1;min-width:60px;height:8px;border-radius:4px}
+
+/* 아바타·배지 */
+.sx-av{flex:none;width:30px;height:30px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:color-mix(in srgb,var(--acc) 18%,var(--solid));color:var(--acc);font-weight:700;font-size:13px}
+.sx-av img{width:100%;height:100%;object-fit:cover;display:block}
+.sx-av.out{background:var(--chip);color:var(--mut)}
+.sx-av svg{width:18px;height:18px}
+.sx-av.lg{width:40px;height:40px;font-size:16px}
+.sx-av.lg svg{width:22px;height:22px}
+.sx-badge{position:absolute;top:-3px;right:-3px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--sx-no);color:#fff;font-size:10px;font-weight:700;line-height:16px;text-align:center;box-shadow:0 0 0 2px var(--solid)}
+.sx-badge:empty,.sx-badge[data-n="0"]{display:none}
+
+/* 계정 칸 */
+.sx-acct{display:flex;align-items:center;gap:10px}
+.sx-acct .who{flex:1;min-width:0;display:flex;flex-direction:column}
+.sx-acct .who b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sx-acct .who small{font-size:11.5px;color:var(--mut)}
+
+/* 메뉴 목록(개인 메뉴 등) */
+.sx-menu{display:flex;flex-direction:column;gap:1px}
+.sx-mi{display:flex;align-items:center;gap:10px;border:0;background:none;border-radius:9px;padding:8px 8px;font-size:13.5px;cursor:pointer;text-align:left;color:var(--fg);width:100%;position:relative}
+.sx-mi:hover{background:var(--chip)}
+.sx-mi svg{width:18px;height:18px;color:var(--mut);flex:none}
+.sx-mi .tx{flex:1;min-width:0}
+.sx-mi .tx small{display:block;font-size:11.5px;color:var(--mut)}
+.sx-mi em{font-style:normal;font-size:12px;color:var(--mut)}
+.sx-mi .n{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--sx-no);color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center;font-style:normal}
+.sx-mi .n[data-n="0"]{display:none}
+.sx-sep{height:1px;background:var(--line);margin:6px 0}
+
+/* 책 요청 폼 */
+.sx-req .sx-field{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--mut)}
+.sx-req textarea{width:100%;resize:vertical;border:1px solid var(--line);background:var(--solid);color:var(--fg);border-radius:10px;padding:9px 11px;font:inherit;font-size:14px;outline:none}
+.sx-req textarea:focus{border-color:var(--acc)}
+.sx-file{display:flex;align-items:center;gap:10px;margin:10px 0;cursor:pointer;font-size:13px}
+.sx-file input{position:absolute;width:1px;height:1px;opacity:0}
+.sx-file .fb{border:1px dashed var(--line);border-radius:9px;padding:7px 11px;white-space:nowrap}
+.sx-file:hover .fb{border-color:var(--acc);color:var(--acc)}
+.sx-file .fn{font-size:12px;color:var(--mut);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* 알림함 */
+.sx-inbox ul{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.sx-ni{border:1px solid var(--line);border-radius:11px;padding:9px 11px;background:var(--solid)}
+.sx-ni.new{border-color:color-mix(in srgb,var(--acc) 55%,var(--line));box-shadow:inset 3px 0 0 var(--acc)}
+.sx-ni .h{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.sx-ni .h b{font-size:13.5px;flex:1;min-width:0}
+.sx-ni time{font-size:11px;color:var(--mut);white-space:nowrap}
+.sx-ni .st{font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--chip);color:var(--mut);white-space:nowrap}
+.sx-ni .st.approved{background:color-mix(in srgb,var(--sx-ok) 15%,transparent);color:var(--sx-ok)}
+.sx-ni .st.rejected{background:color-mix(in srgb,var(--sx-no) 13%,transparent);color:var(--sx-no)}
+.sx-ni .st.pending{background:color-mix(in srgb,var(--acc) 13%,transparent);color:var(--acc)}
+.sx-ni .rp{margin:7px 0 0;font-size:12.5px;line-height:1.5;background:var(--chip);border-radius:9px;padding:6px 9px}
+.sx-ni .rp span{font-weight:700;margin-right:6px;font-size:11.5px}
+.sx-ni .rp.wait{background:none;padding:0;color:var(--mut);font-size:12px}
+.sx-ni .rp.them{background:none;padding:0}
+.sx-ni .att{margin:5px 0 0;font-size:12px;color:var(--mut)}
+.sx-ni .kd{font-size:11px;color:var(--mut);white-space:nowrap}
+.sx-ni .sx-reply{width:100%;margin:8px 0 6px;border:1px solid var(--line);background:var(--solid);color:var(--fg);border-radius:8px;padding:6px 9px;font:inherit;font-size:13px}
+.sx-empty{color:var(--mut);font-size:13px;padding:14px 4px;text-align:center}
+
+/* 시트: 데스크톱은 가운데 창, 폰은 하단 시트 */
+.sx-scrim{position:fixed;inset:0;z-index:60;background:rgba(10,12,16,.28);display:grid;place-items:center;opacity:0;transition:opacity .15s}
+.sx-scrim.in{opacity:1}
+.sx-sheet{width:min(440px,calc(100% - 32px));max-height:min(80vh,680px);background:var(--solid);color:var(--fg);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden}
+.sx-sheet header{display:flex;align-items:center;gap:8px;padding:12px 10px 8px 16px}
+.sx-sheet header b{flex:1;font-size:15px}
+.sx-x{width:32px;height:32px;border:0;background:none;border-radius:8px;cursor:pointer;color:var(--mut);display:grid;place-items:center}
+.sx-x:hover{background:var(--chip);color:var(--fg)}
+.sx-x svg{width:18px;height:18px}
+.sx-body{padding:4px 16px 16px;overflow:auto;overscroll-behavior:contain}
+
+/* 조건 버블 바: 데스크톱은 검색창 아래, 폰은 아래 카드 위 한 줄. 보이는 책 수가 끝에 붙는다(#status 대신). */
+#status{display:none!important}
+#sx-bub{position:fixed;left:16px;top:78px;z-index:18;display:flex;align-items:center;gap:6px;max-width:min(760px,calc(100% - 32px));pointer-events:none}
+#sx-bub>*{pointer-events:auto}
+#sx-bub .bl{display:flex;flex-wrap:wrap;gap:6px}
+#sx-bub .bl:empty{display:none}
+.sx-bb{display:inline-flex;align-items:center;gap:3px;height:32px;padding:0 4px 0 12px;border-radius:999px;background:color-mix(in srgb,var(--acc) 14%,var(--solid));border:1px solid var(--acc);color:var(--fg);font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.10);white-space:nowrap}
+.sx-bb button{width:24px;height:24px;border:0;border-radius:50%;background:none;color:var(--acc);cursor:pointer;display:grid;place-items:center;padding:0}
+.sx-bb button:hover{background:color-mix(in srgb,var(--acc) 20%,transparent)}
+.sx-bb button svg{width:14px;height:14px}
+#sx-bub .badd{height:32px;border:1px dashed color-mix(in srgb,var(--mut) 55%,var(--line));background:var(--card);border-radius:999px;padding:0 12px;font-size:12.5px;color:var(--mut);cursor:pointer;white-space:nowrap}
+#sx-bub .badd:hover{border-color:var(--acc);color:var(--acc)}
+#sx-bub .bn{height:32px;display:inline-flex;align-items:center;gap:3px;font-size:12px;color:var(--mut);background:var(--card);border-radius:999px;padding:0 11px;white-space:nowrap;border:1px solid var(--line)}
+#sx-bub .bn b{color:var(--fg);font-size:13px}
+#sx-bub.has .bn{border-color:var(--acc)}
+#legend .it{cursor:pointer;border-radius:5px}
+#legend .it:hover{background:var(--chip)}
+.sx-lg .it[data-name]{cursor:pointer}
+.sx-cond .sx-chips{margin-bottom:12px}
+.sx-chip.dis{opacity:.45}
+@media (min-width:721px){ #results,#shelf{top:122px} }  /* 데스크톱: 버블 바 아래로 */
+
+/* 토스트 */
+.sx-toast{position:fixed;left:50%;bottom:84px;transform:translate(-50%,8px);z-index:80;background:var(--fg);color:var(--bg);border-radius:10px;padding:9px 14px;font-size:13px;max-width:calc(100% - 32px);box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .18s,transform .18s}
+.sx-toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* 시안 이동 배지(검토용) */
+.sx-nav{position:fixed;right:16px;bottom:40px;z-index:16;display:flex;align-items:center;gap:2px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px;font-size:12px;box-shadow:var(--shadow)}
+.sx-nav .nm{color:var(--mut);padding:0 8px 0 9px;white-space:nowrap}
+.sx-nav a{min-width:26px;height:24px;border-radius:999px;display:grid;place-items:center;text-decoration:none;color:var(--fg);font-weight:600;padding:0 6px}
+.sx-nav a:hover{background:var(--chip)}
+.sx-nav a.on{background:var(--acc);color:var(--acc-ink)}
+.sx-nav a.home{color:var(--acc);font-weight:500}
+body.sx-shot .sx-nav{display:none}
+body.sx-shot *,body.sx-shot *::before,body.sx-shot *::after{transition:none!important;animation-duration:0s!important}
+
+/* 팝오버 바탕 */
+.sx-pop{position:fixed;z-index:45;background:var(--solid);color:var(--fg);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:12px;display:none;overscroll-behavior:contain}
+.sx-pop.open{display:block}
+
+@media (pointer:coarse){
+  .sx-seg button{min-height:40px}
+  .sx-chip{min-height:38px}
+  .sx-opt{min-height:52px}
+  .sx-mi{min-height:46px}
+  .sx-btn{min-height:40px}
+  .sx-x{width:44px;height:44px}
+  .sx-axes select{min-height:40px}
+}
+@media (max-width:720px){
+  .sx-scrim{place-items:end stretch}
+  .sx-sheet{width:auto;max-height:82vh;border-radius:18px 18px 0 0;border-bottom:0;padding-bottom:env(safe-area-inset-bottom)}
+  .sx-sheet::before{content:"";display:block;width:36px;height:4px;border-radius:2px;background:var(--line);margin:8px auto 0}
+  .sx-toast{bottom:calc(96px + env(safe-area-inset-bottom))}
+  .sx-nav{right:calc(4px + env(safe-area-inset-right));bottom:auto;top:40%;flex-direction:column;border-radius:14px;font-size:11px;padding:2px;opacity:.9}
+  .sx-nav .nm{display:none}
+  .sx-nav a{min-width:26px;height:26px;padding:0}
+  .sx-nav a.home{font-size:10px}
+  body.sheet .sx-nav,body.sx-results .sx-nav{display:none}
+  #sx-bub{left:0;right:0;top:auto;bottom:calc(10px + env(safe-area-inset-bottom) + var(--sx-lift,0px));max-width:none;padding:2px 10px 4px;overflow-x:auto;scrollbar-width:none}
+  #sx-bub::-webkit-scrollbar{display:none}
+  #sx-bub .bl{flex-wrap:nowrap}
+  #sx-bub>*{flex:none}
+  .sx-bb,#sx-bub .badd,#sx-bub .bn{height:36px}
+  body.sx-card #sx-bub{--sx-lift:calc(var(--sx-cardh,64px) + 8px)}
+  body.sx-panel #sx-bub,body.sx-results #sx-bub{display:none}
+  #legend{bottom:calc(58px + env(safe-area-inset-bottom))}
+  body.sx-card #legend{display:none}
+}

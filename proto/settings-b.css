@@ -1,0 +1,60 @@
+/* 시안 B · 왼쪽 아이콘 레일 + 사이드 시트 */
+#pb-rail{position:fixed;left:0;top:0;bottom:0;width:72px;z-index:24;background:var(--solid);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:14px 0 12px;gap:2px}
+.pb-logo{font-weight:800;font-size:12px;line-height:1.25;text-align:center;color:var(--acc);margin:0 0 14px;letter-spacing:-.02em}
+.pb-it{position:relative;width:60px;min-height:58px;border:0;background:none;border-radius:12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--mut);font-size:11.5px}
+.pb-it svg{width:22px;height:22px}
+.pb-it:hover{background:var(--chip);color:var(--fg)}
+.pb-it.on{background:color-mix(in srgb,var(--acc) 13%,transparent);color:var(--acc);font-weight:650}
+.pb-it .sx-badge{top:5px;right:9px}
+.pb-gap{width:32px;height:1px;background:var(--line);margin:8px 0}
+.pb-flex{flex:1}
+.pb-me .av .sx-av{width:28px;height:28px}
+.pb-me.on .sx-av{box-shadow:0 0 0 2px var(--acc)}
+
+#pb-sheet{position:fixed;left:72px;top:0;bottom:0;width:360px;z-index:23;background:var(--solid);color:var(--fg);border-right:1px solid var(--line);box-shadow:var(--shadow);transform:translateX(calc(-100% - 80px));transition:transform .2s ease;display:flex;flex-direction:column}
+#pb-sheet.open{transform:none}
+#pb-sheet header{display:flex;align-items:center;padding:16px 10px 4px 20px}
+#pb-sheet header b{flex:1;font-size:17px;letter-spacing:-.01em}
+.pb-body{flex:1;overflow:auto;padding:0 20px 28px;overscroll-behavior:contain}
+.pb-sec{padding:14px 0;border-bottom:1px solid var(--line)}
+.pb-sec:last-child{border-bottom:0}
+.pb-sec details.sx-adv>summary{padding:2px 0}
+.pb-in{padding-top:10px}
+.pb-presets{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.pb-sws{margin:10px 0 6px}
+.pb-empty{display:flex;flex-direction:column;align-items:flex-start;gap:8px;border:0}
+.pb-empty>svg{width:34px;height:34px;color:var(--mut)}
+.pb-empty>b{font-size:15px}
+.pb-body .sx-req,.pb-body .sx-inbox{padding-top:8px}
+
+/* 검색창·결과·범례는 레일 오른쪽, 시트·서재 패널이 열리면 그 오른쪽으로 */
+#ctl,#results{left:88px;transition:left .2s ease}
+#legend{left:88px}
+body.pb-open #ctl,body.pb-open #results,body.pb-open #legend{left:448px}
+body.sx-shelf:not(.pb-open) #ctl,body.sx-shelf:not(.pb-open) #results,body.sx-shelf:not(.pb-open) #legend{left:448px}
+#shelf{left:72px;top:0;bottom:0;width:360px;max-height:none;border-radius:0;border:0;border-right:1px solid var(--line);z-index:23}
+#sx-bub{left:88px;transition:left .2s ease}
+body.pb-open #sx-bub,body.sx-shelf:not(.pb-open) #sx-bub{left:448px}
+
+@media (max-width:720px){
+  #pb-rail{top:auto;right:0;width:auto;height:calc(62px + env(safe-area-inset-bottom));flex-direction:row;justify-content:space-around;align-items:stretch;padding:3px 4px env(safe-area-inset-bottom);border-right:0;border-top:1px solid var(--line);gap:0}
+  .pb-logo,.pb-gap,.pb-flex{display:none}
+  .pb-it{flex:1;width:auto;min-height:54px;border-radius:10px}
+  .pb-it .sx-badge{right:calc(50% - 22px)}
+  #pb-sheet{left:0;right:0;top:auto;bottom:calc(62px + env(safe-area-inset-bottom));width:auto;height:min(64vh,580px);border:1px solid var(--line);border-bottom:0;border-radius:18px 18px 0 0;transform:translateY(calc(100% + 80px))}
+  #pb-sheet.open{transform:none}
+  #pb-sheet header{padding:12px 6px 2px 18px}
+  .pb-body{padding:0 16px 20px}
+  #ctl,#results,body.pb-open #ctl,body.pb-open #results,body.sx-shelf:not(.pb-open) #ctl,body.sx-shelf:not(.pb-open) #results{left:calc(10px + env(safe-area-inset-left))}
+  #legend,body.pb-open #legend,body.sx-shelf:not(.pb-open) #legend{left:10px;bottom:calc(120px + env(safe-area-inset-bottom))}
+  #sx-bub,body.pb-open #sx-bub,body.sx-shelf:not(.pb-open) #sx-bub{left:0;bottom:calc(72px + env(safe-area-inset-bottom) + var(--sx-lift,0px))}
+  body.pb-open #sx-bub,body.sx-shelf #sx-bub{display:none}
+  body.pb-open #legend,body.pb-open #status{display:none}
+  #card{bottom:calc(70px + env(safe-area-inset-bottom))}
+  #panel{bottom:calc(62px + env(safe-area-inset-bottom));padding-bottom:24px}
+  #panel:not(.open){transform:translateY(calc(100% + 90px))}
+  #results:not(.fold){bottom:calc(62px + env(safe-area-inset-bottom))}
+  #shelf{left:0;right:0;top:auto;bottom:calc(62px + env(safe-area-inset-bottom));width:auto;height:62vh;border:1px solid var(--line);border-bottom:0;border-radius:18px 18px 0 0}
+  .sx-toast{bottom:calc(150px + env(safe-area-inset-bottom))}
+  .sx-nav{top:30%}
+}

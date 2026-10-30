@@ -1,0 +1,12 @@
+{
+ "state": "done",
+ "ok": true,
+ "trigger": "daily",
+ "requestedAt": null,
+ "startedAt": "2026-10-30T19:00:01Z",
+ "finishedAt": "2026-10-30T19:01:31Z",
+ "newBooks": 0,
+ "costUsd": 0.0,
+ "maxCostUsd": 1.0,
+ "message": ""
+}
