@@ -1,0 +1,56 @@
+/* 책 요청·알림함(intake.js). 색은 지도 페이지 변수(--acc, --line ...)를 쓴다. */
+#bell{position:relative}
+#bell svg{width:20px;height:20px}
+#bell .ibadge{position:absolute;top:1px;right:0;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--acc);color:var(--acc-ink);font-size:10px;font-weight:700;line-height:16px;text-align:center}
+
+/* 🔔 알림함 */
+#inbox{position:fixed;left:16px;top:var(--below,66px);width:min(400px,calc(100% - 32px));max-height:min(72vh,680px);z-index:38;display:flex;flex-direction:column;background:var(--solid);color:var(--fg);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+#inbox[hidden]{display:none}
+#inbox .ihead{display:flex;align-items:center;justify-content:space-between;padding:8px 8px 8px 14px;border-bottom:1px solid var(--line);font-size:14px}
+#inbox .ibody{overflow:auto;padding:4px 14px 14px;overscroll-behavior:contain}
+#inbox h4{margin:12px 0 6px;font-size:12px;color:var(--mut);font-weight:600}
+#inbox ul{list-style:none;margin:0;padding:0}
+#inbox li{padding:8px 0;border-top:1px solid var(--line);font-size:13px}
+#inbox li:first-child{border-top:0}
+#inbox .imeta{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--mut)}
+#inbox .imeta b{color:var(--fg)}
+#inbox .imeta time{margin-left:auto;font-size:11px}
+#inbox em{font-style:normal}
+#inbox .st{padding:0 6px;border-radius:6px;background:var(--chip);color:var(--fg);font-size:11px;font-weight:600}
+#inbox .st.approved{background:color-mix(in srgb,#2e9d5b 18%,transparent);color:#2e9d5b}
+#inbox .st.rejected{background:color-mix(in srgb,var(--mut) 18%,transparent)}
+#inbox .imsg{margin-top:3px;white-space:pre-wrap;word-break:break-word}
+#inbox .imsg1{flex:1;min-width:0;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#inbox .ireply{margin-top:3px;color:var(--fg);padding-left:8px;border-left:2px solid var(--acc);white-space:pre-wrap;word-break:break-word}
+#inbox .inote.new .imsg1{font-weight:700}
+#inbox .inote.new{background:linear-gradient(90deg,color-mix(in srgb,var(--acc) 10%,transparent),transparent)}
+#inbox .ifile{display:inline-block;margin-top:4px;font-size:12px;color:var(--acc);word-break:break-all}
+#inbox .iact{display:flex;gap:6px;margin-top:6px}
+#inbox .iact input{flex:1;min-width:0;border:1px solid var(--line);background:var(--solid);color:var(--fg);border-radius:8px;padding:5px 8px;font:inherit;font-size:13px}
+#inbox .ireload{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:2px 0 4px}
+#inbox .ireload .hint{flex:1;min-width:160px;font-size:12px;color:var(--mut)}
+#inbox .none{font-size:12px;color:var(--mut);padding:4px 0}
+.btn.ok{border-color:var(--acc);background:var(--acc);color:var(--acc-ink);font-weight:600}
+.btn:disabled{opacity:.5;cursor:default}
+
+/* 설정 안 '📥 책 요청' */
+#intake-sec textarea{width:100%;min-height:64px;resize:vertical;border:1px solid var(--line);background:var(--solid);color:var(--fg);border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;outline:none}
+#intake-sec textarea:focus{border-color:var(--acc)}
+#intake-sec .row{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap}
+#intake-sec .isend{justify-content:space-between;flex-wrap:nowrap}
+#intake-sec .hint,#intake-sec .none{font-size:12px;color:var(--mut)}
+#intake-sec .iatt{margin-top:6px;font-size:13px;display:flex;align-items:center;gap:8px;word-break:break-all}
+#intake-sec .iatt .btn{margin-left:auto}
+#intake-sec .ilink{margin-top:6px;font-size:12px;color:var(--mut)}
+#intake-sec .ilink summary{cursor:pointer}
+#intake-sec .ilink a{color:var(--acc)}
+#intake-sec .ilink input{flex:1;min-width:0;border:1px solid var(--line);background:var(--solid);color:var(--fg);border-radius:8px;padding:5px 8px;font:inherit;font-size:13px}
+
+/* Google Picker 창이 지도 위로 오게 */
+.picker-dialog-bg{z-index:1000!important}
+.picker-dialog{z-index:1001!important}
+
+@media (max-width:720px){
+  #inbox{left:0;right:0;top:auto;bottom:0;width:auto;max-height:75vh;border-radius:16px 16px 0 0;padding-bottom:env(safe-area-inset-bottom)}
+  #inbox .iact{flex-wrap:wrap}
+}
