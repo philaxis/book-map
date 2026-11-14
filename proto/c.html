@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>시안 C · 그래프</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  body{--bg:#080a0f}
+  .ctl{position:fixed;left:12px;top:56px;z-index:15;display:flex;flex-direction:column;gap:6px;font-size:13px}
+  .ctl .row{display:flex;gap:6px;flex-wrap:wrap}
+  .ctl .hint{color:var(--mut);font-size:12px;max-width:230px}
+  .float-tooltip-kap{font:13px system-ui,"Noto Sans KR",sans-serif!important;background:#000d!important;border-radius:6px!important;padding:4px 8px!important}
+  @media (max-width:720px){.ctl{top:auto;bottom:12px;left:8px;right:8px}.ctl .hint{display:none}}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div class="bar" id="bar">
+  <a class="home" href="./">← 시안 목록</a>
+  <h1>C · 책 그래프</h1>
+</div>
+<div class="ctl">
+  <div class="row">
+    <button class="btn on" id="fixed">위치: 의미 지도</button>
+    <button class="btn" id="spin">천천히 돌기</button>
+    <button class="btn" id="reset">처음 보기</button>
+  </div>
+  <div class="row"><label class="btn" style="cursor:default">선 <select id="kk"><option value="2">이웃 2</option><option value="3" selected>이웃 3</option><option value="5">이웃 5</option></select></label></div>
+  <div class="hint">드래그 회전(놓으면 관성) · 휠/두 손가락 확대 · 오른쪽 드래그 이동 · 점 클릭 = 카메라가 날아가 붙음 · 빈 곳 클릭 = 해제. '힘으로 풀기'를 누르면 선이 당기는 대로 다시 배치됩니다.</div>
+</div>
+<script src="data.js"></script>
+<script src="common.js"></script>
+<script src="https://unpkg.com/3d-force-graph@1.79.1/dist/3d-force-graph.min.js"></script>
+<script>
+// 3d-force-graph(Obsidian 3D 그래프)를 따라 한 것: 책 = 구슬, 임베딩 kNN = 선, TrackballControls(놓으면 관성으로 계속 돎),
+// 점 클릭 → 공식 예제 'click-to-focus' 처럼 카메라가 그 점 바깥에서 날아가 붙음, 이웃·선 강조 + 선 위를 흐르는 입자,
+// '힘으로 풀기' → 고정 위치를 풀고 d3-force-3d 가 선을 따라 다시 배치(Obsidian 그래프처럼 출렁임).
+const SCALE = 3;
+let K = 3;
+const nodes = P.map((p, i) => {
+  const [x, y, z] = p.x.map(v => v * SCALE);
+  return { id: i, x, y, z, fx: x, fy: y, fz: z };
+});
+function makeLinks(k) {
+  const seen = new Set(), out = [];
+  P.forEach((p, i) => p.nn.slice(0, k).forEach((j, r) => {
+    const key = i < j ? `${i}-${j}` : `${j}-${i}`;
+    if (!seen.has(key)) { seen.add(key); out.push({ source: i, target: j, sim: p.ns[r] }); }
+  }));
+  return out;
+}
+const degree = new Array(P.length).fill(0);
+let selected = -1, hoverNode = -1;
+const hlNodes = new Set(), hlLinks = new Set();
+
+const Graph = new ForceGraph3D(document.getElementById("stage"), { controlType: "trackball" })
+  .backgroundColor("#080a0f")
+  .showNavInfo(false)
+  .graphData({ nodes, links: makeLinks(K) })
+  .nodeLabel(n => esc(P[n.id].t))
+  .nodeVal(n => 1 + degree[n.id] * 0.35)
+  .nodeRelSize(2.2)
+  .nodeResolution(10)
+  .nodeOpacity(0.95)
+  .nodeColor(n => selected < 0 ? (hoverNode === n.id ? "#ffffff" : colorOf(n.id)) : n.id === selected ? "#ffffff" : hlNodes.has(n.id) ? colorOf(n.id) : "#262a33")
+  .linkColor(l => hlLinks.has(l) ? "#ffd166" : "#8a93a6")
+  .linkOpacity(0.22)
+  .linkWidth(l => hlLinks.has(l) ? 1.2 : 0)
+  .linkDirectionalParticles(l => hlLinks.has(l) ? 3 : 0)
+  .linkDirectionalParticleWidth(1.6)
+  .linkDirectionalParticleSpeed(0.006)
+  .cooldownTicks(0)
+  .onNodeHover(n => { hoverNode = n ? n.id : -1; document.getElementById("stage").style.cursor = n ? "pointer" : ""; if (selected < 0) refresh(); })
+  .onNodeClick(n => select(n.id))
+  .onBackgroundClick(() => select(-1));
+
+function countDegree() {
+  degree.fill(0);
+  Graph.graphData().links.forEach(l => { degree[l.source.id ?? l.source]++; degree[l.target.id ?? l.target]++; });
+}
+countDegree();
+function refresh() { Graph.nodeColor(Graph.nodeColor()).linkColor(Graph.linkColor()).linkWidth(Graph.linkWidth()).linkDirectionalParticles(Graph.linkDirectionalParticles()); }
+
+const panel = makePanel({ onPick: i => select(i), onClose: () => select(-1) });
+function select(i) {
+  selected = i; hlNodes.clear(); hlLinks.clear();
+  shiftView(Graph.camera(), i >= 0);
+  if (i < 0) { panel.hide(); refresh(); return; }
+  hlNodes.add(i);
+  P[i].nn.slice(0, 10).forEach(j => hlNodes.add(j));
+  Graph.graphData().links.forEach(l => {
+    const s = l.source.id ?? l.source, t = l.target.id ?? l.target;
+    if (s === i || t === i) { hlLinks.add(l); hlNodes.add(s); hlNodes.add(t); }
+  });
+  refresh();
+  panel.show(i);
+  // click-to-focus: 점 바깥쪽에서 그 점을 바라보며 날아간다
+  const n = nodes[i], dist = 150, r = Math.hypot(n.x, n.y, n.z) || 1, ratio = 1 + dist / r;
+  Graph.cameraPosition({ x: n.x * ratio, y: n.y * ratio, z: n.z * ratio }, { x: n.x, y: n.y, z: n.z }, 1600);
+}
+
+makeSearch(document.getElementById("bar"), { onPick: i => select(i) });
+
+// 위치: 의미 지도(UMAP 3D 고정) ↔ 힘으로 풀기(선이 당기는 대로)
+const fixedBtn = document.getElementById("fixed");
+let fixedOn = true;
+Graph.d3Force("charge").strength(-6);
+Graph.d3Force("link").distance(l => 12 + (1 - l.sim) * 60).strength(0.5);
+fixedBtn.addEventListener("click", () => {
+  fixedOn = !fixedOn;
+  fixedBtn.textContent = fixedOn ? "위치: 의미 지도" : "위치: 힘으로 풀기";
+  fixedBtn.classList.toggle("on", fixedOn);
+  nodes.forEach((n, i) => {
+    if (fixedOn) { const [x, y, z] = P[i].x.map(v => v * SCALE); n.fx = x; n.fy = y; n.fz = z; }
+    else { n.fx = n.fy = n.fz = undefined; }
+  });
+  Graph.cooldownTicks(fixedOn ? 60 : 400).d3ReheatSimulation();
+});
+document.getElementById("kk").addEventListener("change", e => {
+  K = +e.target.value;
+  Graph.graphData({ nodes, links: makeLinks(K) });
+  countDegree();
+  if (selected >= 0) select(selected); else refresh();
+});
+
+const spinBtn = document.getElementById("spin");
+let spin = false, angle = 0;
+spinBtn.addEventListener("click", () => { spin = !spin; spinBtn.classList.toggle("on", spin); });
+(function tick() {
+  if (spin && selected < 0) {
+    const c = Graph.cameraPosition(), d = Math.hypot(c.x, c.z);
+    angle = Math.atan2(c.x, c.z) + 0.002;
+    Graph.cameraPosition({ x: d * Math.sin(angle), z: d * Math.cos(angle) });
+  }
+  requestAnimationFrame(tick);
+})();
+const HOME = { x: 0, y: 60, z: Math.max(720, 560 * 1.4 * innerHeight / innerWidth) };
+document.getElementById("reset").addEventListener("click", () => { select(-1); Graph.cameraPosition(HOME, { x: 0, y: 0, z: 0 }, 1200); });
+setTimeout(() => Graph.cameraPosition(HOME, { x: 0, y: 0, z: 0 }, 0), 0);
+Graph.controls().dynamicDampingFactor = 0.08;  // 놓은 뒤 더 오래 미끄러지게(관성)
+
+const leg = document.createElement("div");
+leg.className = "legend";
+leg.innerHTML = D.coarse.map((c, k) => `<span style="white-space:nowrap;margin-right:8px"><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${PALETTE[k % PALETTE.length]};margin-right:3px"></i>${esc(c.name)}</span>`).join(" ");
+document.body.appendChild(leg);
+addEventListener("resize", () => { Graph.width(innerWidth).height(innerHeight); shiftView(Graph.camera(), selected >= 0); });
+</script>
+</body>
+</html>
