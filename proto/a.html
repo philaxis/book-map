@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>시안 A · 프로젝터</title>
+<link rel="stylesheet" href="common.css">
+<style>
+  .lbl{position:fixed;z-index:12;pointer-events:none;font-size:12px;color:#1d1f24;background:#ffffffd0;padding:1px 5px;border-radius:4px;white-space:nowrap;transform:translate(8px,-50%);max-width:240px;overflow:hidden;text-overflow:ellipsis}
+  .lbl.sel{font-weight:700;font-size:13px;border:1px solid #e8710a}
+  .side{position:fixed;left:12px;top:56px;z-index:15;background:#fffe;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;width:220px}
+  .side label{white-space:nowrap;display:flex;gap:6px;align-items:center;margin:4px 0}
+  .side input[type=range]{flex:1}
+  .side .row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  @media (max-width:720px){.side{top:auto;bottom:12px;left:8px;width:auto;right:8px;padding:6px 8px}.side .hint{display:none}}
+</style>
+</head>
+<body class="light">
+<div id="stage"></div>
+<div class="bar" id="bar">
+  <a class="home" href="./">← 시안 목록</a>
+  <h1>A · 임베딩 프로젝터</h1>
+</div>
+<div class="side">
+  <label>이웃 수 <input id="k" type="range" min="5" max="30" value="10"><b id="kv">10</b></label>
+  <label>색 <select id="colorby"><option value="k1">큰 분야</option><option value="c">분류(철학·수학…)</option><option value="d">난이도</option></select></label>
+  <div class="row">
+    <button class="btn on" id="rot">자동 회전</button>
+    <button class="btn" id="iso" disabled>이웃만 보기</button>
+    <button class="btn" id="clear" disabled>선택 해제</button>
+    <button class="btn" id="reset">처음 보기</button>
+  </div>
+  <div class="hint" style="color:var(--mut);margin-top:8px;font-size:12px">드래그 회전 · 휠 확대 · 오른쪽 드래그(두 손가락) 이동 · 점 클릭 = 이웃 강조</div>
+</div>
+<script src="data.js"></script>
+<script src="common.js"></script>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+THREE.ColorManagement.enabled = false;  // 팔레트 색을 그대로(셰이더가 선형 변환을 안 한다)
+
+// Embedding Projector 를 따라 한 것: 흰 바탕 3D 산점도, OrbitControls(왼쪽 회전·오른쪽 이동·휠 확대),
+// 처음엔 자동 회전·만지면 멈춤, 점 클릭 → 선택 고정 + 최근접 이웃을 거리 순 색으로 강조하고 나머지는 회색으로 흐림,
+// 오른쪽 검사 패널(이웃 목록·유사도), 검색 일치 강조, '이웃만 보기'(Isolate).
+const stage = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setClearColor(0xffffff);
+stage.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(55, 1, 0.5, 3000);
+const HOME = new THREE.Vector3(0, 30, 190 * Math.max(1, 0.75 * innerHeight / innerWidth));
+camera.position.copy(HOME);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.8;
+controls.zoomToCursor = true;
+controls.minDistance = 5;
+controls.maxDistance = 900;
+
+const n = P.length;
+const pos = new Float32Array(n * 3), col = new Float32Array(n * 3), size = new Float32Array(n), alpha = new Float32Array(n);
+P.forEach((p, i) => pos.set(p.x, i * 3));
+const geo = new THREE.BufferGeometry();
+geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+geo.setAttribute("size", new THREE.BufferAttribute(size, 1));
+geo.setAttribute("alpha", new THREE.BufferAttribute(alpha, 1));
+const mat = new THREE.ShaderMaterial({
+  uniforms: { scale: { value: 1 } },
+  vertexShader: `attribute float size; attribute float alpha; attribute vec3 color; varying vec3 vC; varying float vA;
+    uniform float scale;
+    void main(){ vC=color; vA=alpha; vec4 mv=modelViewMatrix*vec4(position,1.0); gl_PointSize=size*scale*(760.0/-mv.z); gl_Position=projectionMatrix*mv; }`,
+  fragmentShader: `varying vec3 vC; varying float vA;
+    void main(){ vec2 d=gl_PointCoord-0.5; float r=length(d); if(r>0.5) discard; float edge=smoothstep(0.5,0.42,r); gl_FragColor=vec4(vC*(r>0.4?0.8:1.0),vA*edge); }`,
+  transparent: true, depthWrite: false,
+});
+const cloud = new THREE.Points(geo, mat);
+scene.add(cloud);
+
+const GREY = new THREE.Color("#c8ccd2");
+const SEQ = ["#d7301f", "#ef6548", "#fc8d59", "#fdbb84", "#fdd49e"].map(c => new THREE.Color(c)); // 가까울수록 진한 빨강(프로젝터 이웃 색)
+const DIFF = ["#cfe1f2", "#93c4de", "#4a98c9", "#1764ab", "#08306b"];
+const CAT = ["#7b4fd6", "#d6336c", "#2b8a3e", "#e8590c", "#1c7ed6", "#868e96"];
+let colorBy = "k1", selected = -1, matches = null, isolate = false, hover = -1;
+const kInput = document.getElementById("k");
+const baseColor = i => new THREE.Color(colorBy === "k1" ? colorOf(i) : colorBy === "c" ? CAT[P[i].c] : (P[i].d ? DIFF[P[i].d - 1] : "#ccc"));
+
+function paint() {
+  const k = +kInput.value;
+  const nb = new Map();
+  if (selected >= 0) P[selected].nn.slice(0, k).forEach((j, r) => nb.set(j, r));
+  for (let i = 0; i < n; i++) {
+    let c, s = 2.2, a = 0.9;
+    if (selected >= 0) {
+      if (i === selected) { c = new THREE.Color("#e8710a"); s = 6; a = 1; }
+      else if (nb.has(i)) { c = SEQ[Math.min(4, Math.floor(nb.get(i) / k * 5))]; s = 3.6; a = 1; }
+      else { c = GREY; a = isolate ? 0 : 0.25; s = 1.8; }
+    } else if (matches) {
+      if (matches.has(i)) { c = baseColor(i); s = 4; a = 1; } else { c = GREY; a = 0.25; s = 1.8; }
+    } else c = baseColor(i);
+    if (i === hover) s *= 1.6;
+    col.set([c.r, c.g, c.b], i * 3); size[i] = s; alpha[i] = a;
+  }
+  geo.attributes.color.needsUpdate = geo.attributes.size.needsUpdate = geo.attributes.alpha.needsUpdate = true;
+  document.getElementById("iso").disabled = document.getElementById("clear").disabled = selected < 0;
+  drawLabelsSet();
+}
+
+// 이름표: 선택 점 + 이웃(프로젝터처럼 화면에 글자를 띄운다)
+const labels = [];
+let labelIdx = [];
+function drawLabelsSet() {
+  labels.forEach(l => l.remove()); labels.length = 0;
+  labelIdx = selected >= 0 ? [selected, ...P[selected].nn.slice(0, Math.min(+kInput.value, 15))] : matches && matches.size <= 30 ? [...matches] : [];
+  labelIdx.forEach((i, r) => { const d = document.createElement("div"); d.className = "lbl" + (r === 0 && selected >= 0 ? " sel" : ""); d.textContent = P[i].t; document.body.appendChild(d); labels.push(d); });
+}
+const v = new THREE.Vector3();
+function placeLabels() {
+  const w = innerWidth, h = innerHeight;
+  labelIdx.forEach((i, r) => {
+    v.fromArray(pos, i * 3).project(camera);
+    const el = labels[r];
+    if (v.z > 1) { el.style.display = "none"; return; }
+    el.style.display = "block";
+    el.style.left = ((v.x + 1) / 2 * w) + "px"; el.style.top = ((1 - v.y) / 2 * h) + "px";
+  });
+}
+
+const panel = makePanel({ onPick: i => select(i, true), onClose: () => select(-1), neighbors: +kInput.value });
+const rotBtn = document.getElementById("rot");
+function setRotate(on) { controls.autoRotate = on; rotBtn.classList.toggle("on", on); }
+
+// 선택하면 그 점을 회전 중심으로 옮긴다(부드럽게).
+let target = null;
+function select(i, focus = false) {
+  selected = i;
+  shiftView(camera, i >= 0);
+  if (i < 0) { panel.hide(); isolate = false; document.getElementById("iso").classList.remove("on"); }
+  else { panel.neighbors = +kInput.value; panel.show(i); setRotate(false); if (focus) target = new THREE.Vector3().fromArray(pos, i * 3); }
+  paint();
+}
+
+const ray = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+function pickAt(cx, cy) {
+  mouse.set(cx / innerWidth * 2 - 1, -(cy / innerHeight) * 2 + 1);
+  ray.setFromCamera(mouse, camera);
+  ray.params.Points.threshold = camera.position.distanceTo(controls.target) * (isTouch ? 0.03 : 0.015);
+  const hits = ray.intersectObject(cloud).filter(h => alpha[h.index] > 0.01);
+  if (!hits.length) return -1;
+  hits.sort((a, b) => a.distanceToRay - b.distanceToRay || a.distance - b.distance);
+  return hits[0].index;
+}
+let down = null;
+renderer.domElement.addEventListener("pointerdown", e => { down = { x: e.clientX, y: e.clientY }; setRotate(false); });
+renderer.domElement.addEventListener("pointerup", e => {
+  if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6 || e.button !== 0) return;
+  const i = pickAt(e.clientX, e.clientY);
+  select(i);
+});
+renderer.domElement.addEventListener("pointermove", e => {
+  if (e.pointerType !== "mouse" || e.buttons) return;
+  const i = pickAt(e.clientX, e.clientY);
+  if (i !== hover) { hover = i; paint(); }
+  if (i >= 0) showTip(e.clientX, e.clientY, P[i].t); else hideTip();
+  renderer.domElement.style.cursor = i >= 0 ? "pointer" : "";
+});
+renderer.domElement.addEventListener("pointerleave", hideTip);
+
+makeSearch(document.getElementById("bar"), {
+  onInput: hits => { matches = hits ? new Set(hits) : null; if (hits) select(-1); paint(); },
+  onPick: i => select(i, true),
+});
+kInput.addEventListener("input", () => { document.getElementById("kv").textContent = kInput.value; if (selected >= 0) { panel.neighbors = +kInput.value; panel.show(selected); } paint(); });
+document.getElementById("colorby").addEventListener("change", e => { colorBy = e.target.value; paint(); legend(); });
+rotBtn.addEventListener("click", () => setRotate(!controls.autoRotate));
+document.getElementById("iso").addEventListener("click", e => { isolate = !isolate; e.target.classList.toggle("on", isolate); paint(); });
+document.getElementById("clear").addEventListener("click", () => select(-1));
+document.getElementById("reset").addEventListener("click", () => { select(-1); target = new THREE.Vector3(); camera.position.copy(HOME); setRotate(true); });
+
+const leg = document.createElement("div");
+leg.className = "legend";
+document.body.appendChild(leg);
+function legend() {
+  const items = colorBy === "k1" ? D.coarse.map((c, k) => [PALETTE[k % PALETTE.length], c.name]) : colorBy === "c" ? D.categories.map((c, k) => [CAT[k], c]) : DIFF.map((c, k) => [c, `난이도 ${k + 1}`]);
+  leg.innerHTML = items.map(([c, t]) => `<span style="white-space:nowrap;margin-right:8px"><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${c};margin-right:3px"></i>${esc(t)}</span>`).join(" ");
+}
+legend();
+
+function resize() {
+  renderer.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth / innerHeight; shiftView(camera, selected >= 0);
+  mat.uniforms.scale.value = Math.min(devicePixelRatio, 2) * Math.min(1, innerHeight / 800) * 0.9;
+}
+addEventListener("resize", resize);
+resize();
+paint();
+renderer.setAnimationLoop(() => {
+  if (target) { controls.target.lerp(target, 0.12); if (controls.target.distanceTo(target) < 0.05) target = null; }
+  controls.update();
+  renderer.render(scene, camera);
+  placeLabels();
+});
+</script>
+</body>
+</html>
